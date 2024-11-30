@@ -843,24 +843,24 @@ class DatabaseManager:
 
     def add_rating(self, user_id, order_id, rating):
         cursor = self.conn.cursor()
-        check = "SELECT user_id, order_id FROM Feedback WHERE user_id = ? AND order_id = ?"
-        cursor.execute(check, (user_id, order_id, rating))
-        if check:
-            try:
-                query = "UPDATE Feedback (user_id, order_id, rating, rated_at) VALUES (?, ?, ?, GETDATE())"
-                cursor.execute(query, (user_id, order_id, rating))
-                self.conn.commit()
-            except Exception as e:
-                self.conn.rollback()
-                print(f"Error while adding rating: {e}")
-            finally:
-                cursor.close()
         try:
-            query = "INSERT INTO Feedback (user_id, order_id, rating, rated_at) VALUES (?, ?, ?, GETDATE())"
-            cursor.execute(query, (user_id, order_id, rating))
+            check = "SELECT user_id, order_id FROM Feedback WHERE user_id = ? AND order_id = ?"
+            cursor.execute(check, (user_id, order_id))
+            result = cursor.fetchone()
+            
+            if result:
+                # Update existing feedback
+                query = "UPDATE Feedback SET rating = ?, rated_at = GETDATE() WHERE user_id = ? AND order_id = ?"
+                cursor.execute(query, (rating, user_id, order_id))
+            else:
+                # Insert new feedback
+                query = "INSERT INTO Feedback (user_id, order_id, rating, rated_at) VALUES (?, ?, ?, GETDATE())"
+                cursor.execute(query, (user_id, order_id, rating))
+            
             self.conn.commit()
         except Exception as e:
             self.conn.rollback()
             print(f"Error while adding rating: {e}")
         finally:
             cursor.close()
+

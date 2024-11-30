@@ -1,3 +1,4 @@
+from PyQt6 import QtWidgets
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout,
     QHBoxLayout, QMessageBox, QGridLayout, QScrollArea, QToolButton,
@@ -18,6 +19,11 @@ class MainMenuUser(QMainWindow):
         self.setWindowTitle("HU Eats - Main Menu")
         self.setFixedSize(600, 700)
         self.user_id = user_id
+
+        qr = self.frameGeometry()
+        cp = QtWidgets.QApplication.primaryScreen().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
 
         # Initialize database manager and fetch user and vendor data
         self.db_manager = DatabaseManager(conn=get_db_connection())

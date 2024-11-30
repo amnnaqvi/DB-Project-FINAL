@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QFont, QAction, QIcon
 from PyQt6.QtCore import Qt
+from PyQt6 import QtWidgets
 import sys
 from pathlib import Path
 from datetime import datetime
@@ -22,6 +23,11 @@ class NotificationScreen(QMainWindow):
         print(self.user_id)
         # Initialize database manager
         self.db_manager = DatabaseManager(conn=get_db_connection())
+
+        qr = self.frameGeometry()
+        cp = QtWidgets.QApplication.primaryScreen().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
 
         # Create and set up the UI
         self.create_app_bar()

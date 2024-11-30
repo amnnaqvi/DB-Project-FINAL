@@ -3,6 +3,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout, QScrollArea, QFrame, QMenu, QMessageBox, QApplication, QSpacerItem, QSizePolicy, QToolButton, QDialog, QComboBox
 )
 from PyQt6.QtGui import QAction, QFont, QIcon
+from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt, QPoint
 from pathlib import Path
 import sys
@@ -20,6 +21,11 @@ class OrderHistoryScreen(QWidget):
         
         self.setWindowTitle("Order History")
         self.setFixedSize(600, 700)
+
+        qr = self.frameGeometry()
+        cp = QtWidgets.QApplication.primaryScreen().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
 
         main_layout = QVBoxLayout()
 

@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QFont, QIcon, QAction
 from PyQt6.QtCore import Qt
+from PyQt6 import QtWidgets
 import sys
 from pathlib import Path
 
@@ -18,6 +19,11 @@ class UserBuyMenu(QMainWindow):
         self.setFixedSize(600, 700)
         self.user_id = user_id
         self.vendor_id = vendor_id
+
+        qr = self.frameGeometry()
+        cp = QtWidgets.QApplication.primaryScreen().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
 
         # Initialize database manager
         self.db_manager = DatabaseManager(conn=get_db_connection())

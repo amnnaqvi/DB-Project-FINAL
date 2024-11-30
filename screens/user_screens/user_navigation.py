@@ -1,11 +1,17 @@
 # user_navigation.py
 import sys
 from PyQt6.QtWidgets import QApplication, QMessageBox
+from PyQt6 import QtWidgets
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
 class UserNavigation:
     _instance = None
+
+    qr = self.frameGeometry()
+    cp = QtWidgets.QApplication.primaryScreen().availableGeometry().center()
+    qr.moveCenter(cp)
+    self.move(qr.topLeft())
 
     def __new__(cls):
         if cls._instance is None:

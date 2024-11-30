@@ -2,11 +2,11 @@ import pyodbc
 
 def clear_db():
     # Connect to the database
-    conn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};'
-        'SERVER=localhost;'
+    conn = pyodbc.connect(
+        'DRIVER={ODBC Driver 17 for SQL Server};'
+        'SERVER=AMN-NAQVI\\SQLEXPRESS;'
         'DATABASE=DBProject;'
-        'UID=sa;'
-        'PWD=rs9190678_')
+        'Trusted_Connection=yes;')
     cursor = conn.cursor()
 
     try:

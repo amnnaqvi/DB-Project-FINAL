@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QTextCursor, QAction, QFont, QIcon
 from PyQt6.QtCore import Qt, QPoint
+from PyQt6 import QtWidgets
 import sys
 from pathlib import Path
 
@@ -19,6 +20,11 @@ class OrderDetailsPopup(QWidget):
         self.order_id = order_id
         self.db_manager = DatabaseManager(get_db_connection())
         print(self.user_id)
+
+        qr = self.frameGeometry()
+        cp = QtWidgets.QApplication.primaryScreen().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
 
         # Set up window properties for a smaller popup
         self.setWindowTitle("Order Details")

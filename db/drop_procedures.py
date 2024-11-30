@@ -4,10 +4,9 @@ def clear_stored_procedures():
     """Clear all stored procedures in the database."""
     connection_string = (
         'DRIVER={ODBC Driver 17 for SQL Server};'
-        'SERVER=localhost;'
+        'SERVER=AMN-NAQVI\\SQLEXPRESS;'
         'DATABASE=DBProject;'
-        'UID=sa;'
-        'PWD=rs9190678_'
+        'Trusted_Connection=yes;'
     )
 
     try:

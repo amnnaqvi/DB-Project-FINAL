@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QFont, QIcon, QAction
 from PyQt6.QtCore import Qt
+from PyQt6 import QtWidgets
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
@@ -18,6 +19,11 @@ class FavoritesScreen(QMainWindow):
         self.user_id = user_id
         self.db_manager = DatabaseManager(conn=get_db_connection())
         self.favorites = self.fetch_favorites()
+
+        qr = self.frameGeometry()
+        cp = QtWidgets.QApplication.primaryScreen().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
         
         # UI setup
         self.create_app_bar()
