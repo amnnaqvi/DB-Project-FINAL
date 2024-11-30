@@ -36,6 +36,36 @@ class DatabaseManager:
     def __init__(self, conn):
         self.conn = conn
 
+    def get_active_vendors(self):
+        cursor = self.conn.cursor()
+        query = "SELECT * FROM Vendors WHERE is_active = 1"
+        cursor.execute(query)
+        info = cursor.fetchall()
+        cursor.close()
+        return info
+    
+    def fetch_vendor_items(self, vendor_id):
+        
+        cursor = self.conn.cursor()
+        query = """
+        SELECT 
+            mi.item_id,
+            mi.item_name,
+            mi.price,
+            sc.sub_type AS subcategory_type
+        FROM 
+            Menu_Items AS mi
+        JOIN 
+            SubCategory AS sc ON mi.sub_id = sc.sub_id
+        WHERE 
+            mi.vendor_id = ?
+        """
+        cursor.execute(query, (vendor_id,))
+        items = cursor.fetchall()
+        cursor.close()
+        return items
+
+
     # ADMIN
 
     def get_admin_info_login(self, email):
@@ -111,6 +141,169 @@ class DatabaseManager:
             return 1
         except Exception:
             return 0
+
+    #for users
+
+    def view_users(self):
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT * FROM Users")
+        info = cursor.fetchall()
+        cursor.close()
+        return info
+    
+    def count_users(self):
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT count(*) FROM Users")
+        info = cursor.fetchall()
+        cursor.close()
+        return info
+
+    def add_users(self, u_id, u_name, u_type, u_email, u_pass):
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(
+                """
+                SET IDENTITY_INSERT Users ON; 
+                INSERT INTO Users (user_id, full_name, type_id, current_balance, email, password, is_active) 
+                VALUES (?, ?, ?, ?, ?); 
+                SET IDENTITY_INSERT Users OFF;
+                """,
+                (u_id, u_name, u_type, 0.0, u_email, u_pass, 1)
+            )
+            self.conn.commit()
+            cursor.close()
+            return 1
+        except Exception:
+            return 0
+
+
+    def edit_users(self, u_id, u_name, u_type, u_bal, u_email, u_pass):
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(
+                """
+                UPDATE Users 
+                SET full_name = ?, type_id = ?, current_balance = ?, email = ?, password = ?
+                WHERE user_id = ?;
+                """,
+                (u_name, u_type, u_bal, u_email, u_pass, u_id)
+            )
+            self.conn.commit()
+            cursor.close()
+            return 1
+        except Exception:
+            return 0
+        
+    def count_users_balance_records(self):
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT count(*) FROM User_Balance_History")
+        info = cursor.fetchall()
+        cursor.close()
+        return info
+        
+    def update_users_balance(self, u_id, deposit, a_id):
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(
+            """
+            INSERT INTO User_Balance_History (user_id, amount, is_deposit, record_date, physical_payment, admin_id)
+            VALUES (?, ?, 1, GETDATE(), 1, ?);
+            """,
+            (u_id, deposit, a_id))
+            self.conn.commit()
+            cursor.close()
+            return 1
+        except Exception:
+            return 0
+
+
+    def update_users_status(self, u_id, new_status):
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(
+                """
+                UPDATE Users 
+                SET is_active = ? 
+                WHERE user_id = ?;
+                """,
+                (new_status, u_id)
+            )
+            self.conn.commit()
+            cursor.close()
+            return 1
+        except Exception:
+            return 0
+        
+    
+     #for vendors
+
+    def view_vendors(self):
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT * FROM Vendors")
+        info = cursor.fetchall()
+        cursor.close()
+        return info
+    
+    def count_vendors(self):
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT count(*) FROM Vendors")
+        info = cursor.fetchall()
+        cursor.close()
+        return info
+
+    def add_vendors(self, v_id, v_name, v_img, v_pass, v_contact, v_email, a_id):
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(
+                """
+                SET IDENTITY_INSERT Vendors ON; 
+                INSERT INTO Vendors (vendor_id, vendor_name, image, password, is_active, contact_number, email, admin_id) 
+                VALUES (?, ?, ?, ?, ?); 
+                SET IDENTITY_INSERT Vendors OFF;
+                """,
+                (v_id, v_name, v_img, v_pass, 1, v_contact, v_email, a_id)
+            )
+            self.conn.commit()
+            cursor.close()
+            return 1
+        except Exception:
+            return 0
+
+
+    def edit_vendors(self, v_id, v_name, v_img, v_pass, v_contact, v_email, a_id):
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(
+                """
+                UPDATE Vendors
+                SET  vendor_name = ?, image = ?, password = ?, contact_number = ?, email = ?, admin_id = ?
+                WHERE vendor_id = ?;
+                """,
+                (v_name, v_img, v_pass, v_contact, v_email, a_id, v_id)
+            )
+            self.conn.commit()
+            cursor.close()
+            return 1
+        except Exception:
+            return 0
+
+    def update_vendors_status(self, v_id, new_status):
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(
+                """
+                UPDATE Vendors
+                SET is_active = ? 
+                WHERE vendor_id = ?;
+                """,
+                (new_status, v_id)
+            )
+            self.conn.commit()
+            cursor.close()
+            return 1
+        except Exception:
+            return 0
+
         
     # VENDORS
     
@@ -134,7 +327,7 @@ class DatabaseManager:
 
     def update_order_status(self,order_id,text,user_id):
         query="""
-            CALL UpdateOrderStatus
+            {CALL UpdateOrderStatus(?, ?, ?)}
              
               """
         with self.conn.cursor() as cursor:
