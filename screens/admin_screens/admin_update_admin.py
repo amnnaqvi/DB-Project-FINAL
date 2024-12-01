@@ -90,17 +90,25 @@ class UpdateAdmin(QMainWindow):
         self.delete_button.clicked.connect(self.delete_admin)
 
     def populate_admin_table(self):
-        self.admin_data = self.db_manager.view_admin()
-        sorted_admin_data = sorted(self.admin_data, key=lambda x: not x[4])
-        self.admin_table.setRowCount(len(sorted_admin_data))
-        self.admin_table.setColumnCount(len(self.admin_data[0]))
-        
-        for row, record in enumerate(sorted_admin_data):
-            for col, value in enumerate(record):
-                item = QTableWidgetItem(str(value))
-                self.admin_table.setItem(row, col, item)
-                self.admin_table.item(row, col).setTextAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        try:
+            column_names = self.db_manager.get_column_names("Admin")
+            self.admin_table.setColumnCount(len(column_names))
+            self.admin_table.setHorizontalHeaderLabels(column_names)
+            self.admin_table.horizontalHeader().setStyleSheet("QHeaderView::section {background-color: #2A2A5F; color: #FFFFFF; font-weight: bold; font-size: 14px; font-family: Arial; border: 1px solid #4A4A7D;}")
+            
+            self.admin_data = self.db_manager.view_admin()
+            sorted_admin_data = sorted(self.admin_data, key=lambda x: not x[4])
+            self.admin_table.setRowCount(len(sorted_admin_data))
 
+            for row, record in enumerate(sorted_admin_data):
+                for col, value in enumerate(record):
+                    item = QTableWidgetItem(str(value))
+                    self.admin_table.setItem(row, col, item)
+                    self.admin_table.item(row, col).setTextAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to populate admin table: {str(e)}")
+            
     def filter_admin_table(self):
         search_text = self.searchBar.text().strip().lower()
         filtered_data = []
@@ -118,42 +126,59 @@ class UpdateAdmin(QMainWindow):
                 self.admin_table.item(row, col).setTextAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
     def add_admin(self):
-        try:
-            new_id = self.db_manager.count_admin()[0][0] + 1
+            try:
+                new_id = self.db_manager.count_admin()[0][0] + 1
+                existing_emails = [record[2].lower() for record in self.admin_data] 
 
-            name, ok1 = QInputDialog.getText(self, "New Admin", "Enter name:")
-            while ok1 and not name.strip(): 
-                QMessageBox.warning(self, "Input Error", "Name cannot be empty. Please try again.")
                 name, ok1 = QInputDialog.getText(self, "New Admin", "Enter name:")
+                while ok1 and (not name.strip() or not name.replace(" ", "").isalnum() or name.isdigit()):
+                    if not name.strip():
+                        QMessageBox.warning(self, "Input Error", "Name cannot be empty. Please enter a valid name.")
+                    elif not name.replace(" ", "").isalnum():
+                        QMessageBox.warning(self, "Input Error", "Name can only contain letters, numbers, and spaces.")
+                    elif name.isdigit():
+                        QMessageBox.warning(self, "Input Error", "Name must include at least one letter.")
+                    name, ok1 = QInputDialog.getText(self, "New Admin", "Enter name:")
 
-            if not ok1: 
-                return
+                if not ok1:
+                    return
 
-            email, ok2 = QInputDialog.getText(self, "New Admin", "Enter email (must end with @habib.edu.pk):")
-            while ok2 and (not email.strip() or not email.endswith("@habib.edu.pk") or not len(email) > 13):
-                QMessageBox.warning(self, "Input Error", "Invalid email. Please ensure it ends with '@habib.edu.pk'.")
                 email, ok2 = QInputDialog.getText(self, "New Admin", "Enter email (must end with @habib.edu.pk):")
+                while ok2 and (not email.strip() or not email.endswith("@habib.edu.pk") or len(email) <= 13 or email.lower() in existing_emails):
+                    if not email.strip():
+                        QMessageBox.warning(self, "Input Error", "Email cannot be empty. Please enter a valid email.")
+                    elif not email.endswith("@habib.edu.pk"):
+                        QMessageBox.warning(self, "Input Error", "Email must end with '@habib.edu.pk'.")
+                    elif len(email) <= 13:
+                        QMessageBox.warning(self, "Input Error", "Email is too short. Please enter a valid email.")
+                    elif email.lower() in existing_emails:
+                        QMessageBox.warning(self, "Input Error", "This email is already in use. Please enter a unique email.")
+                    email, ok2 = QInputDialog.getText(self, "New Admin", "Enter email (must end with @habib.edu.pk):")
 
-            if not ok2: 
-                return
+                if not ok2:
+                    return
 
-            password, ok3 = QInputDialog.getText(self, "New Admin", "Set password:")
-            while ok3 and not password.strip():
-                QMessageBox.warning(self, "Input Error", "Password cannot be empty. Please try again.")
                 password, ok3 = QInputDialog.getText(self, "New Admin", "Set password:")
+                while ok3 and (not password.strip() or len(password) < 8):
+                    if not password.strip():
+                        QMessageBox.warning(self, "Input Error", "Password cannot be empty. Please enter a valid password.")
+                    elif len(password) < 8:
+                        QMessageBox.warning(self, "Input Error", "Password must be at least 8 characters long.")
+                    password, ok3 = QInputDialog.getText(self, "New Admin", "Set password:")
 
-            if not ok3: 
-                return
+                if not ok3:
+                    return
 
-            result = self.db_manager.add_admin(new_id, name.strip(), email.strip(), password.strip())
-            if result:
-                self.populate_admin_table() 
-                QMessageBox.information(self, "Success", f"New admin '{name}' added successfully.")
-            else:
-                QMessageBox.warning(self, "Failure", f"Failed to add new admin '{name}'. Please try again.")
+                result = self.db_manager.add_admin(new_id, name.strip(), email.strip(), password.strip())
+                if result:
+                    self.populate_admin_table()
+                    QMessageBox.information(self, "Success", f"New admin '{name}' added successfully.")
+                else:
+                    QMessageBox.warning(self, "Failure", f"Failed to add new admin '{name}'. Please try again.")
 
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"An error occurred: {str(e)}")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"An error occurred: {str(e)}")
+
 
     def edit_admin(self):
         try:
@@ -172,25 +197,46 @@ class UpdateAdmin(QMainWindow):
             current_email = self.admin_table.item(selected_row, 2).text()
             current_pass = self.admin_table.item(selected_row, 3).text()
 
+            existing_emails = [record[2].lower() for record in self.admin_data if record[0] != admin_id]
+
             new_name, ok1 = QInputDialog.getText(self, "Edit Admin", "Enter new name:", text=current_name)
-            while ok1 and not new_name.strip():
-                QMessageBox.warning(self, "Input Error", "Name cannot be empty. Please try again.")
+            while ok1 and (
+                not new_name.strip() or
+                not new_name.replace(" ", "").isalnum() or
+                new_name.isdigit()
+            ):
+                if not new_name.strip():
+                    QMessageBox.warning(self, "Input Error", "Name cannot be empty. Please enter a valid name.")
+                elif not new_name.replace(" ", "").isalnum():
+                    QMessageBox.warning(self, "Input Error", "Name can only contain letters, numbers, and spaces.")
+                elif new_name.isdigit():
+                    QMessageBox.warning(self, "Input Error", "Name must include at least one letter.")
                 new_name, ok1 = QInputDialog.getText(self, "Edit Admin", "Enter new name:", text=current_name)
 
             if not ok1:
                 return
 
             new_email, ok2 = QInputDialog.getText(self, "Edit Admin", "Enter new email (must end with @habib.edu.pk):", text=current_email)
-            while ok2 and (not new_email.strip() or not new_email.endswith("@habib.edu.pk") or len(new_email) <= 13):
-                QMessageBox.warning(self, "Input Error", "Invalid email. Please ensure it ends with '@habib.edu.pk'.")
+            while ok2 and (not new_email.strip() or not new_email.endswith("@habib.edu.pk") or len(new_email) <= 13 or new_email.lower() in existing_emails):
+                if not new_email.strip():
+                    QMessageBox.warning(self, "Input Error", "Email cannot be empty. Please enter a valid email.")
+                elif not new_email.endswith("@habib.edu.pk"):
+                    QMessageBox.warning(self, "Input Error", "Email must end with '@habib.edu.pk'.")
+                elif len(new_email) <= 13:
+                    QMessageBox.warning(self, "Input Error", "Email is too short. Please enter a valid email.")
+                elif new_email.lower() in existing_emails:
+                    QMessageBox.warning(self, "Input Error", "This email is already in use. Please enter a unique email.")
                 new_email, ok2 = QInputDialog.getText(self, "Edit Admin", "Enter new email (must end with @habib.edu.pk):", text=current_email)
 
             if not ok2:
                 return
 
             new_password, ok3 = QInputDialog.getText(self, "Edit Admin", "Set new password:", text=current_pass)
-            while ok3 and not new_password.strip():
-                QMessageBox.warning(self, "Input Error", "Password cannot be empty. Please try again.")
+            while ok3 and (not new_password.strip() or len(new_password) < 8):
+                if not new_password.strip():
+                    QMessageBox.warning(self, "Input Error", "Password cannot be empty. Please enter a valid password.")
+                elif len(new_password) < 8:
+                    QMessageBox.warning(self, "Input Error", "Password must be at least 8 characters long.")
                 new_password, ok3 = QInputDialog.getText(self, "Edit Admin", "Set new password:", text=current_pass)
 
             if not ok3:
@@ -205,6 +251,7 @@ class UpdateAdmin(QMainWindow):
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"An error occurred: {str(e)}")
+
 
     def delete_admin(self):
         selected_row = self.admin_table.currentRow()

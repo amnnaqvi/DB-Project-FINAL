@@ -90,16 +90,24 @@ class UpdateVendors(QMainWindow):
         self.delete_button.clicked.connect(self.delete_vendor)
 
     def populate_vendor_table(self):
-        self.vendor_data = self.db_manager.view_vendors()
-        sorted_vendor_data = sorted(self.vendor_data, key=lambda x: not x[4])
-        self.vendor_table.setRowCount(len(sorted_vendor_data))
-        self.vendor_table.setColumnCount(len(self.vendor_data[0]))
-        
-        for row, record in enumerate(sorted_vendor_data):
-            for col, value in enumerate(record):
-                item = QTableWidgetItem(str(value))
-                self.vendor_table.setItem(row, col, item)
-                self.vendor_table.item(row, col).setTextAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        try:
+            column_names = self.db_manager.get_column_names("Vendors")
+            self.vendor_table.setColumnCount(len(column_names))
+            self.vendor_table.setHorizontalHeaderLabels(column_names)
+            self.vendor_table.horizontalHeader().setStyleSheet("QHeaderView::section {background-color: #2A2A5F; color: #FFFFFF; font-weight: bold; font-size: 14px; font-family: Arial; border: 1px solid #4A4A7D;}")
+            
+            self.vendor_data = self.db_manager.view_vendors()
+            sorted_vendor_data = sorted(self.vendor_data, key=lambda x: not x[4])
+            self.vendor_table.setRowCount(len(sorted_vendor_data))
+
+            for row, record in enumerate(sorted_vendor_data):
+                for col, value in enumerate(record):
+                    item = QTableWidgetItem(str(value))
+                    self.vendor_table.setItem(row, col, item)
+                    self.vendor_table.item(row, col).setTextAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to populate vendor table: {str(e)}")
 
     def filter_vendor_table(self):
         search_text = self.searchBar.text().strip().lower()

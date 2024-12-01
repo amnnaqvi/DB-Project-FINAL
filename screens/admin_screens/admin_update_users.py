@@ -90,17 +90,25 @@ class UpdateUsers(QMainWindow):
         self.delete_button.clicked.connect(self.delete_user)
 
     def populate_user_table(self):
-        self.user_data = self.db_manager.view_users()
-        sorted_user_data = sorted(self.user_data, key=lambda x: not x[6])
-        self.user_table.setRowCount(len(sorted_user_data))
-        self.user_table.setColumnCount(len(self.user_data[0]))
-        
-        for row, record in enumerate(sorted_user_data):
-            for col, value in enumerate(record):
-                item = QTableWidgetItem(str(value))
-                self.user_table.setItem(row, col, item)
-                self.user_table.item(row, col).setTextAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        try:
+            column_names = self.db_manager.get_column_names("Users")
+            self.user_table.setColumnCount(len(column_names))
+            self.user_table.setHorizontalHeaderLabels(column_names)
+            self.user_table.horizontalHeader().setStyleSheet("QHeaderView::section {background-color: #2A2A5F; color: #FFFFFF; font-weight: bold; font-size: 14px; font-family: Arial; border: 1px solid #4A4A7D;}")
+            
+            self.user_data = self.db_manager.view_users()
+            sorted_user_data = sorted(self.user_data, key=lambda x: not x[6])
+            self.user_table.setRowCount(len(sorted_user_data))
 
+            for row, record in enumerate(sorted_user_data):
+                for col, value in enumerate(record):
+                    item = QTableWidgetItem(str(value))
+                    self.user_table.setItem(row, col, item)
+                    self.user_table.item(row, col).setTextAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to populate user table: {str(e)}")
+            
     def filter_user_table(self):
         search_text = self.searchBar.text().strip().lower()
         filtered_data = []
@@ -121,47 +129,65 @@ class UpdateUsers(QMainWindow):
         try:
             new_id = self.db_manager.count_users()[0][0] + 1
 
+            existing_emails = [record[4].lower() for record in self.user_data]
+
             name, ok1 = QInputDialog.getText(self, "New User", "Enter Full Name:")
-            while ok1 and not name.strip(): 
-                QMessageBox.warning(self, "Input Error", "Name cannot be empty. Please try again.")
+            while ok1 and (not name.strip() or not name.replace(" ", "").isalnum() or name.isdigit()):
+                if not name.strip():
+                    QMessageBox.warning(self, "Input Error", "Name cannot be empty. Please enter a valid name.")
+                elif not name.replace(" ", "").isalnum():
+                    QMessageBox.warning(self, "Input Error", "Name can only contain letters, numbers, and spaces.")
+                elif name.isdigit():
+                    QMessageBox.warning(self, "Input Error", "Name must include at least one letter.")
                 name, ok1 = QInputDialog.getText(self, "New User", "Enter Full Name:")
 
-            if not ok1: 
-                return
-            
-            type, ok1 = QInputDialog.getInt(self, "New User", "Enter Type - 1 for Student, 2 for Faculty, 3 for Staff:")
-            while ok1 and not type in [1, 2, 3]: 
-                QMessageBox.warning(self, "Input Error", "Please try again.")
-                type, ok1 = QInputDialog.getInt(self, "New User", "Enter Type - 1 for Student, 2 for Faculty, 3 for Staff:")
-
-            if not ok1: 
+            if not ok1:
                 return
 
-            email, ok1 = QInputDialog.getText(self, "New User", "Enter email (must end with habib.edu.pk):")
-            while ok1 and (not email.strip() or not email.endswith("habib.edu.pk") or not len(email) > 12):
-                QMessageBox.warning(self, "Input Error", "Invalid email. Please ensure it ends with '.habib.edu.pk'.")
-                email, ok1 = QInputDialog.getText(self, "New User", "Enter email (must end with habib.edu.pk):")
+            user_type, ok2 = QInputDialog.getInt(self, "New User", "Enter Type - 1 for Student, 2 for Faculty, 3 for Staff:")
+            while ok2 and user_type not in [1, 2, 3]:
+                QMessageBox.warning(self, "Input Error", "Invalid type. Please enter 1 for Student, 2 for Faculty, or 3 for Staff.")
+                user_type, ok2 = QInputDialog.getInt(self, "New User", "Enter Type - 1 for Student, 2 for Faculty, 3 for Staff:")
 
-            if not ok1: 
+            if not ok2:
                 return
 
-            password, ok1 = QInputDialog.getText(self, "New User", "Set password:")
-            while ok1 and not password.strip():
-                QMessageBox.warning(self, "Input Error", "Password cannot be empty. Please try again.")
-                password, ok1 = QInputDialog.getText(self, "New User", "Set password:")
+            email, ok3 = QInputDialog.getText(self, "New User", "Enter email (must end with habib.edu.pk):")
+            while ok3 and (not email.strip() or not email.endswith("habib.edu.pk") or len(email) <= 12 or email.lower() in existing_emails):
+                if not email.strip():
+                    QMessageBox.warning(self, "Input Error", "Email cannot be empty. Please enter a valid email.")
+                elif not email.endswith("habib.edu.pk"):
+                    QMessageBox.warning(self, "Input Error", "Email must end with 'habib.edu.pk'.")
+                elif len(email) <= 12:
+                    QMessageBox.warning(self, "Input Error", "Email is too short. Please enter a valid email.")
+                elif email.lower() in existing_emails:
+                    QMessageBox.warning(self, "Input Error", "This email is already in use. Please enter a unique email.")
+                email, ok3 = QInputDialog.getText(self, "New User", "Enter email (must end with habib.edu.pk):")
 
-            if not ok1: 
+            if not ok3:
                 return
 
-            result = self.db_manager.add_users(new_id, name.strip(), type, email.strip(), password.strip())
+            password, ok4 = QInputDialog.getText(self, "New User", "Set password:")
+            while ok4 and (not password.strip() or len(password) < 8):
+                if not password.strip():
+                    QMessageBox.warning(self, "Input Error", "Password cannot be empty. Please enter a valid password.")
+                elif len(password) < 8:
+                    QMessageBox.warning(self, "Input Error", "Password must be at least 8 characters long.")
+                password, ok4 = QInputDialog.getText(self, "New User", "Set password:")
+
+            if not ok4:
+                return
+
+            result = self.db_manager.add_users(new_id, name.strip(), user_type, email.strip(), password.strip())
             if result:
-                self.populate_user_table() 
+                self.populate_user_table()
                 QMessageBox.information(self, "Success", f"New user '{name}' added successfully.")
             else:
                 QMessageBox.warning(self, "Failure", f"Failed to add new user '{name}'. Please try again.")
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"An error occurred: {str(e)}")
+
 
     def edit_user(self):
         try:
@@ -174,63 +200,68 @@ class UpdateUsers(QMainWindow):
 
             current_name = self.user_table.item(selected_row, 1).text()
             current_type = int(self.user_table.item(selected_row, 2).text())
-            current_bal = float(self.user_table.item(selected_row, 3).text())
             current_email = self.user_table.item(selected_row, 4).text()
-            current_pass = self.user_table.item(selected_row, 5).text()
+            current_password = self.user_table.item(selected_row, 5).text()
+
+            existing_emails = [record[4].lower() for record in self.user_data if record[0] != user_id]
 
             new_name, ok1 = QInputDialog.getText(self, "Edit User", "Enter new name:", text=current_name)
-            while ok1 and not new_name.strip():
-                QMessageBox.warning(self, "Input Error", "Name cannot be empty. Please try again.")
+            while ok1 and (not new_name.strip() or not new_name.replace(" ", "").isalnum() or new_name.isdigit()):
+                if not new_name.strip():
+                    QMessageBox.warning(self, "Input Error", "Name cannot be empty. Please enter a valid name.")
+                elif not new_name.replace(" ", "").isalnum():
+                    QMessageBox.warning(self, "Input Error", "Name can only contain letters, numbers, and spaces.")
+                elif new_name.isdigit():
+                    QMessageBox.warning(self, "Input Error", "Name must include at least one letter.")
                 new_name, ok1 = QInputDialog.getText(self, "Edit User", "Enter new name:", text=current_name)
 
             if not ok1:
                 return
-            
-            new_type, ok1 = QInputDialog.getInt(self, "Edit User", "Enter new type - 1 for Student, 2 for Faculty, 3 for Staff:", value=current_type)
-            while ok1 and not new_type in [1, 2, 3]:
-                QMessageBox.warning(self, "Input Error", "Please try again.")
-                new_type, ok1 = QInputDialog.getInt(self, "Edit User", "Enter new type - 1 for Student, 2 for Faculty, 3 for Staff:", value=current_type)
 
-            if not ok1:
-                return
-            
-            deposit_amount, ok1 = QInputDialog.getInt(self, "Edit User", "Enter deposit amount:", min=1)
-            while ok1 and deposit_amount < 0:
-                QMessageBox.warning(self, "Input Error", "Deposit amount must be greater than 0. Please try again.")
-                deposit_amount, ok1 = QInputDialog.getInt(self, "Edit User", "Enter deposit amount:", min=1)
+            new_type, ok2 = QInputDialog.getInt(self, "Edit User", "Enter new type - 1 for Student, 2 for Faculty, 3 for Staff:", value=current_type)
+            while ok2 and new_type not in [1, 2, 3]:
+                QMessageBox.warning(self, "Input Error", "Invalid type. Please enter 1 for Student, 2 for Faculty, or 3 for Staff.")
+                new_type, ok2 = QInputDialog.getInt(self, "Edit User", "Enter new type - 1 for Student, 2 for Faculty, 3 for Staff:", value=current_type)
 
-            if not ok1:
+            if not ok2:
                 return
 
-            new_bal = current_bal + deposit_amount
+            new_email, ok3 = QInputDialog.getText(self, "Edit User", "Enter new email (must end with habib.edu.pk):", text=current_email)
+            while ok3 and (not new_email.strip() or not new_email.endswith("habib.edu.pk") or len(new_email) <= 12 or new_email.lower() in existing_emails):
+                if not new_email.strip():
+                    QMessageBox.warning(self, "Input Error", "Email cannot be empty. Please enter a valid email.")
+                elif not new_email.endswith("habib.edu.pk"):
+                    QMessageBox.warning(self, "Input Error", "Email must end with 'habib.edu.pk'.")
+                elif len(new_email) <= 12:
+                    QMessageBox.warning(self, "Input Error", "Email is too short. Please enter a valid email.")
+                elif new_email.lower() in existing_emails:
+                    QMessageBox.warning(self, "Input Error", "This email is already in use. Please enter a unique email.")
+                new_email, ok3 = QInputDialog.getText(self, "Edit User", "Enter new email (must end with habib.edu.pk):", text=current_email)
 
-            new_email, ok1 = QInputDialog.getText(self, "Edit User", "Enter new email (must end with habib.edu.pk):", text=current_email)
-            while ok1 and (not new_email.strip() or not new_email.endswith("habib.edu.pk") or len(new_email) <= 12):
-                QMessageBox.warning(self, "Input Error", "Invalid email. Please ensure it ends with '@habib.edu.pk'.")
-                new_email, ok1 = QInputDialog.getText(self, "Edit User", "Enter new email (must end with habib.edu.pk):", text=current_email)
-
-            if not ok1:
+            if not ok3:
                 return
 
-            new_password, ok1 = QInputDialog.getText(self, "Edit User", "Set new password:", text=current_pass)
-            while ok1 and not new_password.strip():
-                QMessageBox.warning(self, "Input Error", "Password cannot be empty. Please try again.")
-                new_password, ok1 = QInputDialog.getText(self, "Edit User", "Set new password:", text=current_pass)
+            new_password, ok4 = QInputDialog.getText(self, "Edit User", "Set new password:", text=current_password)
+            while ok4 and (not new_password.strip() or len(new_password) < 8):
+                if not new_password.strip():
+                    QMessageBox.warning(self, "Input Error", "Password cannot be empty. Please enter a valid password.")
+                elif len(new_password) < 8:
+                    QMessageBox.warning(self, "Input Error", "Password must be at least 8 characters long.")
+                new_password, ok4 = QInputDialog.getText(self, "Edit User", "Set new password:", text=current_password)
 
-            if not ok1:
+            if not ok4:
                 return
-            
-            result1 = self.db_manager.update_users_balance(user_id, deposit_amount, self.adminID)
-            result2 = self.db_manager.edit_users(user_id, new_name.strip(), new_type, new_bal, new_email.strip(), new_password.strip())
-            if not result1:
-                QMessageBox.warning(self, "Failure", f"Failed to update the user's balance. Please try again.")
-            elif not result2:
-                QMessageBox.warning(self, "Failure", f"Failed to update user details. Please try again.")
-            else:
+
+            result = self.db_manager.edit_users(user_id, new_name.strip(), new_type, new_email.strip(), new_password.strip())
+            if result:
                 self.populate_user_table()
                 QMessageBox.information(self, "Success", f"User with ID {user_id} updated successfully.")
+            else:
+                QMessageBox.warning(self, "Failure", f"Failed to update user with ID {user_id}. Please try again.")
+
         except Exception as e:
             QMessageBox.critical(self, "Error", f"An error occurred: {str(e)}")
+
 
     def delete_user(self):
         selected_row = self.user_table.currentRow()

@@ -36,35 +36,18 @@ class DatabaseManager:
     def __init__(self, conn):
         self.conn = conn
 
-    def get_active_vendors(self):
+    def get_column_names(self, table_name):
         cursor = self.conn.cursor()
-        query = "SELECT * FROM Vendors WHERE is_active = 1"
-        cursor.execute(query)
-        info = cursor.fetchall()
-        cursor.close()
-        return info
-    
-    def fetch_vendor_items(self, vendor_id):
-        
-        cursor = self.conn.cursor()
-        query = """
-        SELECT 
-            mi.item_id,
-            mi.item_name,
-            mi.price,
-            sc.sub_type AS subcategory_type
-        FROM 
-            Menu_Items AS mi
-        JOIN 
-            SubCategory AS sc ON mi.sub_id = sc.sub_id
-        WHERE 
-            mi.vendor_id = ?
-        """
-        cursor.execute(query, (vendor_id,))
-        items = cursor.fetchall()
-        cursor.close()
-        return items
-
+        try:
+            query = f"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{table_name}'"
+            cursor.execute(query)
+            columns = [row[0].upper() for row in cursor.fetchall()]
+        except Exception as e:
+            print(f"Error while fetching column names: {e}")
+            columns = []
+        finally:
+            cursor.close()
+        return columns
 
     # ADMIN
 
@@ -306,6 +289,14 @@ class DatabaseManager:
 
         
     # VENDORS
+
+    def get_active_vendors(self):
+        cursor = self.conn.cursor()
+        query = "SELECT * FROM Vendors WHERE is_active = 1"
+        cursor.execute(query)
+        info = cursor.fetchall()
+        cursor.close()
+        return info
     
     def fetch_current_order_status(self,order_id):
         query="select status from Orders where order_id=?"
@@ -492,6 +483,27 @@ class DatabaseManager:
         return cursor.fetchone()
 
     #USER
+
+    def fetch_vendor_items(self, vendor_id):
+        
+        cursor = self.conn.cursor()
+        query = """
+        SELECT 
+            mi.item_id,
+            mi.item_name,
+            mi.price,
+            sc.sub_type AS subcategory_type
+        FROM 
+            Menu_Items AS mi
+        JOIN 
+            SubCategory AS sc ON mi.sub_id = sc.sub_id
+        WHERE 
+            mi.vendor_id = ?
+        """
+        cursor.execute(query, (vendor_id,))
+        items = cursor.fetchall()
+        cursor.close()
+        return items
 
     def place_order(self, user_id, is_pickup, total_cost):
         """Call the PlaceOrder stored procedure."""
